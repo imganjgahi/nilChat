@@ -1,24 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import logo from './logo.svg';
+import React from 'react';
 import './App.css';
-import io from 'socket.io-client'
+import MainRoutes from './Pages/Routes';
 
 function App() {
-  const [time, setTime] = React.useState('fetching')  
-  React.useEffect(()=>{
-    const socket = io('http://localhost:5000')
-    socket.on('connect', ()=>console.log(socket.id))
-    socket.on('connect_error', ()=>{
-      setTimeout(()=>socket.connect(),5000)
-    })
-   socket.on('time', (data)=>setTime(data))
-   socket.on('disconnect',()=>setTime('server disconnected'))
- 
- },[])
+
  return (
    <div className="App">
-     <h1>Time: </h1>
-     {time}
+     <MainRoutes />
    </div>
  )
 }

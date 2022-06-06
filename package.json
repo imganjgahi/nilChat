@@ -1,0 +1,22 @@
+{
+  "name": "nilchat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "back": "npm run dev --prefix ./backend",
+    "front": "npm start --prefix ./frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imganjgahi/nilChat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/imganjgahi/nilChat/issues"
+  },
+  "homepage": "https://github.com/imganjgahi/nilChat#readme",
+  "dependencies": {}
+}

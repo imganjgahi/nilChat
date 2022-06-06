@@ -1,0 +1,4 @@
+video.myVideo {
+    width: 200px;
+    transform: rotateY(180deg);
+}
