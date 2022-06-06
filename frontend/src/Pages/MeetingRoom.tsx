@@ -16,7 +16,7 @@ const servers = {
 
 interface IUser {
     meetingId: string,
-    userId: string,
+    displayName: string,
     connectionId: string
 }
 
@@ -24,6 +24,7 @@ function MeetingRoom() {
     const [meetingStatus, setMeetingStatus] = React.useState('fetching')
     const [users, setUsers] = React.useState<IUser[]>([])
     const [newUser, registerNewUser] = React.useState<IUser | null>(null)
+    const [userList, setUserList] = React.useState<IUser[]>([])
     const [exitedId, setExitedId] = React.useState<string>("")
     const myVideoRef: any = useRef(null)
     async function turnVideoOn() {
@@ -38,33 +39,56 @@ function MeetingRoom() {
     }, [])
     useEffect(() => {
         if (exitedId) {
+            console.log("LOG: ", users.find(x => x.connectionId === exitedId))
             const updatedList = users.filter(x => x.connectionId !== exitedId)
+            console.log("updatedList: ", updatedList)
             setUsers(updatedList)
         }
     }, [exitedId])
     useEffect(() => {
+        console.log("userList: ", userList)
+            const updatedList = [
+                ...users,
+                ...userList
+            ]
+            setUsers(updatedList)
+    }, [userList])
+    useEffect(() => {
+        console.log("new: ", newUser)
         if (newUser) {
             const updatedList = users
-            if(newUser.meetingId === meetingId) {
+            if(newUser.meetingId === meetingId && !users.some(x => x.connectionId === newUser.connectionId)) {
                 updatedList.push(newUser)
             }
             setUsers(updatedList)
         }
     }, [newUser])
     let socket: any = useRef(null)
-    const { meetingId } = useParams()
+    const { meetingId }: any = useParams()
     React.useEffect(() => {
         socket.current = io('http://localhost:5000')
-        socket.current.on('connect', () => console.log("ID: ", socket.current.id))
         socket.current.on('connect_error', () => {
             setTimeout(() => socket.current.connect(), 5000)
         })
-        // socket.current.on('time', (data: any) => setMeetingStatus(data))
+        socket.current.on('connect', (payload: any) => {
+            console.log("connect", socket.current?.id)
+            registerNewUser({
+                connectionId: socket.current.id,
+                displayName: "Me",
+                meetingId: meetingId,
+            })
+        })
+        socket.current.on('updateData', (payload: any) => {
+            setUserList(payload.userConnections)
+        })
         socket.current.on('newUser', (payload: any) => {
-            registerNewUser(payload)
+            setTimeout(() => {
+                registerNewUser(payload)
+            }, 100);
         })
         socket.current.on('userLeft', (payload: any) => {
-            setExitedId(payload.id)
+            console.log("DDD: ", payload)
+            setExitedId(payload)
         })
         socket.current.on('disconnect', () => setMeetingStatus('server disconnected'))
         socket.current.emit('userconnect', {
