@@ -9,15 +9,12 @@ import MeetingRoom from './MeetingRoom';
 
 function MainRoutes() {
     return (
-        <div>
-            <h1>Nili Chat</h1>
             <BrowserRouter>
             <Routes>
                 <Route path='/meeting/:meetingId' element={<MeetingRoom />} />
                 <Route path='/' element={<Home />} />
             </Routes>
             </BrowserRouter>
-        </div>
     )
 }
 

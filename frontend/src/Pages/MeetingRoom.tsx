@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
 import { io } from 'socket.io-client'
@@ -21,11 +21,9 @@ interface IUser {
 }
 
 function MeetingRoom() {
-    const [meetingStatus, setMeetingStatus] = React.useState('fetching')
+    const [status, setStatus] = React.useState('Pending')
+    const [profile, setProfile]= useState<IUser>(null)
     const [users, setUsers] = React.useState<IUser[]>([])
-    const [newUser, registerNewUser] = React.useState<IUser | null>(null)
-    const [userList, setUserList] = React.useState<IUser[]>([])
-    const [exitedId, setExitedId] = React.useState<string>("")
     const myVideoRef: any = useRef(null)
     async function turnVideoOn() {
         const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -35,86 +33,62 @@ function MeetingRoom() {
 
     }
     useEffect(() => {
-        turnVideoOn()
+        // turnVideoOn()
     }, [])
-    useEffect(() => {
-        if (exitedId) {
-            console.log("LOG: ", users.find(x => x.connectionId === exitedId))
-            const updatedList = users.filter(x => x.connectionId !== exitedId)
-            console.log("updatedList: ", updatedList)
-            setUsers(updatedList)
-        }
-    }, [exitedId])
-    useEffect(() => {
-        console.log("userList: ", userList)
-            const updatedList = [
-                ...users,
-                ...userList
-            ]
-            setUsers(updatedList)
-    }, [userList])
-    useEffect(() => {
-        console.log("new: ", newUser)
-        if (newUser) {
-            const updatedList = users
-            if(newUser.meetingId === meetingId && !users.some(x => x.connectionId === newUser.connectionId)) {
-                updatedList.push(newUser)
-            }
-            setUsers(updatedList)
-        }
-    }, [newUser])
+
     let socket: any = useRef(null)
     const { meetingId }: any = useParams()
     React.useEffect(() => {
-        socket.current = io('http://localhost:5000')
-        socket.current.on('connect_error', () => {
-            setTimeout(() => socket.current.connect(), 5000)
+        let _sc = socket.current
+        _sc = io('http://localhost:5000')
+        _sc.on('connect_error', () => {
+            setTimeout(() => _sc.connect(), 5000)
         })
-        socket.current.on('connect', (payload: any) => {
-            console.log("connect", socket.current?.id)
-            registerNewUser({
-                connectionId: socket.current.id,
-                displayName: "Me",
-                meetingId: meetingId,
-            })
+
+
+        _sc.on('connect', (payload: any) => {
+            setStatus('You are online now')
         })
-        socket.current.on('updateData', (payload: any) => {
-            setUserList(payload.userConnections)
-        })
-        socket.current.on('newUser', (payload: any) => {
-            setTimeout(() => {
-                registerNewUser(payload)
-            }, 100);
-        })
-        socket.current.on('userLeft', (payload: any) => {
-            console.log("DDD: ", payload)
-            setExitedId(payload)
-        })
-        socket.current.on('disconnect', () => setMeetingStatus('server disconnected'))
-        socket.current.emit('userconnect', {
-            displayName: "Mehran",
+        const userInfo: any = {
+            displayName: "Mehran" + (Math.floor(Math.random() * 1000)),
             meetingId: meetingId
+        }
+        console.log("user: ", userInfo)
+        _sc.emit('register', {...userInfo})
+
+        setProfile(userInfo)
+
+        _sc.on("newUser" , (payload: IUser) => {
+            setUsers((userList) => userList.concat(payload))
         })
+
+        _sc.emit("getOtherUsers", meetingId)
+        _sc.on("updateUserList", (payload) => {
+            setUsers((state) => state.concat(payload.list))
+        })
+        _sc.on('userLeft', (payload) => {
+            setUsers((preState) => preState.filter(x => x.connectionId !== payload))
+        })
+        
+        _sc.on('disconnect', () => setStatus('server disconnected'))
         return () => {
-            socket.current.close()
-            socket.current = null
+            _sc.close()
+            _sc = null
         }
 
     }, [])
 
     return (
         <div>
-            <h1>MeetingRoom</h1>
+            <p>Status: {status}</p>
+            <p>PROFILE:{profile?.displayName} in Room {profile?.meetingId} </p>
+            <Link to="/">Back</Link>
             <p>
-                <p>NUM: {users.map((x: any) => {
+                {users.map((x: any) => {
                     return <p> {x.displayName} </p>
-                })}</p>
-                <Link to="/">Back</Link>
+                })}
             </p>
 
-            <div className="videos">
-                <video ref={myVideoRef} src="" className="myVideo" autoPlay></video>
-            </div>
         </div>
 
     )

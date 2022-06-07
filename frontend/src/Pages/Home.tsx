@@ -6,10 +6,10 @@ function Home() {
     const nav = useNavigate()
     return (
         <div>
-
-            <h1>Home </h1>
+            <p>NILI CHAT</p>
             <button onClick={() => {
-                nav("/meeting/"+ Math.floor(Math.random() * 30000000))
+                // nav("/meeting/"+ Math.floor(Math.random() * 30000000))
+                nav("/meeting/"+ 2)
             }}>New Chat</button>
         </div>
     )

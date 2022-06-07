@@ -12,24 +12,31 @@ const io = socketIo(server, {
 let userConnections = []
 io.on('connection', (socket) => {
   console.log('client connected: ', socket.id)
-  socket.on('userconnect', (payload) => {
-    socket.emit('updateData', {userConnections})
+  socket.on('register', (payload) => {
+    socket.join(payload.meetingId)
     userConnections.push(
       {
         connectionId: socket.id,
-        ...payload
+        ...payload,
       }
     )
-      io.emit('newUser', {
-        connectionId: socket.id,
-        ...payload
-      });
+    socket.to(payload.meetingId).emit('newUser', {
+      connectionId: socket.id,
+      ...payload,
+    });
   })
 
+  socket.on('getOtherUsers', (meetingId) => {
+    socket.emit("updateUserList", {
+      list: userConnections.filter(x => x.meetingId === meetingId)
+    })
+  })
   socket.on('disconnect', (reason) => {
     console.log("REASON: ", reason)
+    const targetData = JSON.parse(JSON.stringify(userConnections)).find(x => x.connectionId === socket.id)
     userConnections = userConnections.filter(x => x.connectionId !== socket.id)
-      io.emit('userLeft', socket.id);
+    if(targetData)
+    socket.to(targetData.meetingId).emit('userLeft', socket.id);
   })
 })
 server.listen(PORT, err => {
