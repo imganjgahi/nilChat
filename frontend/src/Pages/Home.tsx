@@ -1,6 +1,5 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { io } from 'socket.io-client'
 
 function Home() {
     const nav = useNavigate()

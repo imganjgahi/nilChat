@@ -22,25 +22,59 @@ interface IUser {
 
 function MeetingRoom() {
     const [status, setStatus] = React.useState('Pending')
-    const [profile, setProfile]= useState<IUser>(null)
     const [users, setUsers] = React.useState<IUser[]>([])
-    const myVideoRef: any = useRef(null)
-    async function turnVideoOn() {
-        const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        if (myVideoRef.current) {
-            myVideoRef.current.srcObject = localStream
+    const [wsId, setWsId] = useState("")
+    let socket: any = useRef(null)
+    const { meetingId }: any = useParams()
+
+    const configuration = {
+        ...servers,
+    }
+
+
+    async function setNewConnection(connectionId) {
+        let connection = new RTCPeerConnection(configuration)
+
+        connection.onnegotiationneeded = async (e) => {
+            await setOffer(connectionId)
+        }
+        connection.onicecandidate = (event) => {
+            if(event.candidate) {
+                SDP_function(JSON.stringify({iceCandidate: event.candidate}), connectionId)
+            }
+        }
+    }
+    async function turnVideoOn(connectionId) {
+        if(connectionId === wsId) {
+            const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            if (document.getElementById(connectionId)) {
+                (document.getElementById(connectionId) as any).srcObject = localStream
+            }
+        } else {
+            setNewConnection(connectionId)
         }
 
     }
     useEffect(() => {
-        // turnVideoOn()
-    }, [])
+        users.forEach(async (person) => {
+            await turnVideoOn(person.connectionId)
+        })
+    }, [users])
 
-    let socket: any = useRef(null)
-    const { meetingId }: any = useParams()
+    async function setOffer(connectionId: string) {
+        
+    }
+
+    async function SDP_function(data, to_connectionId) {
+        socket.current?.emit('SDPProccess', {
+            massage: data,
+            to_connectionId
+        })
+    }
     React.useEffect(() => {
         let _sc = socket.current
         _sc = io('http://localhost:5000')
+        _sc.on('connect', () => setWsId( _sc.id))
         _sc.on('connect_error', () => {
             setTimeout(() => _sc.connect(), 5000)
         })
@@ -56,15 +90,11 @@ function MeetingRoom() {
         console.log("user: ", userInfo)
         _sc.emit('register', {...userInfo})
 
-        setProfile(userInfo)
-
         _sc.on("newUser" , (payload: IUser) => {
             setUsers((userList) => userList.concat(payload))
         })
-
-        _sc.emit("getOtherUsers", meetingId)
         _sc.on("updateUserList", (payload) => {
-            setUsers((state) => state.concat(payload.list))
+            setUsers((state) => payload.list)
         })
         _sc.on('userLeft', (payload) => {
             setUsers((preState) => preState.filter(x => x.connectionId !== payload))
@@ -78,17 +108,24 @@ function MeetingRoom() {
 
     }, [])
 
+    console.log("socket.current?.id: ", wsId)
     return (
         <div>
             <p>Status: {status}</p>
-            <p>PROFILE:{profile?.displayName} in Room {profile?.meetingId} </p>
+            <p>PROFILE: {users.find(x => x.connectionId === wsId)?.displayName || ""} </p>
             <Link to="/">Back</Link>
             <p>
                 {users.map((x: any) => {
                     return <p> {x.displayName} </p>
                 })}
             </p>
-
+                <div className="videos">
+                    {
+                        users.map(person => {
+                            return <video id={person.connectionId} src="" className="myVideo" autoPlay muted controls />
+                        })
+                    }
+                </div>
         </div>
 
     )

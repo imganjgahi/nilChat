@@ -11,25 +11,15 @@ const io = socketIo(server, {
 }) //in case server and client run on different urls
 let userConnections = []
 io.on('connection', (socket) => {
-  console.log('client connected: ', socket.id)
   socket.on('register', (payload) => {
     socket.join(payload.meetingId)
-    userConnections.push(
-      {
+    userConnections.push({
         connectionId: socket.id,
         ...payload,
-      }
-    )
-    socket.to(payload.meetingId).emit('newUser', {
-      connectionId: socket.id,
-      ...payload,
+      })
+    io.to(payload.meetingId).emit('updateUserList', {
+      list: userConnections.filter(x => x.meetingId === payload.meetingId)
     });
-  })
-
-  socket.on('getOtherUsers', (meetingId) => {
-    socket.emit("updateUserList", {
-      list: userConnections.filter(x => x.meetingId === meetingId)
-    })
   })
   socket.on('disconnect', (reason) => {
     console.log("REASON: ", reason)
